@@ -9,13 +9,13 @@ const knex = require('../knex');
 router.get(`/listings`, (req, res, next) => {
   const { name, city } = req.query;
   const q = `
-  select blah.listing_id, address, city, names, count(image_url) as image_count
+  select listings_and_names_array.listing_id, address, city, names, count(image_url) as image_count
   from
     (
       select listing_id, address, city, array_agg((name, is_primary)) as names
       from
         (
-          select foo.listing_id, address, city, agent_id, is_primary
+          select listings_by_city.listing_id, address, city, agent_id, is_primary
           from
             (
               select listing_id, address, city
@@ -29,22 +29,22 @@ router.get(`/listings`, (req, res, next) => {
                 listings
               on agent_listings.listing_id = listings.id
               where listings.city = '${city}'
-            ) foo
+            ) listings_by_city
           inner join
             listings_agents
-          on foo.listing_id = listings_agents.listing_id
+          on listings_by_city.listing_id = listings_agents.listing_id
 
-        ) bar
+        ) listings_with_agents
       inner join
         agents
-      on bar.agent_id = agents.id
+      on listings_with_agents.agent_id = agents.id
       group by listing_id, address, city
 
-    ) blah
+    ) listings_and_names_array
   inner join
     listing_images
-  on blah.listing_id = listing_images.listing_id
-  group by blah.listing_id, address, city, names
+  on listings_and_names_array.listing_id = listing_images.listing_id
+  group by listings_and_names_array.listing_id, address, city, names
   `;
 
   knex.raw(q)
